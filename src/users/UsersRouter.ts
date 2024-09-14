@@ -17,7 +17,7 @@ export default class UsersRouter {
     });
 
     this.router.get("/:id", async (req: Request, res: Response) => {
-      const id = Number(req.params.id);
+      const { id } = req.params;
       try {
         const users = await this.usersService.read({ id });
         res.status(200).json(users);
@@ -42,7 +42,7 @@ export default class UsersRouter {
 
     this.router.put("/:id", async (req: Request, res: Response) => {
       const { name } = req.body;
-      const id = Number(req.params.id);
+      const { id } = req.params;
       try {
         const user = await this.usersService.update({ id, name });
         res.status(200).json(user);
@@ -56,7 +56,7 @@ export default class UsersRouter {
     });
 
     this.router.delete("/:id", async (req: Request, res: Response) => {
-      const id = Number(req.params.id);
+      const { id } = req.params;
       try {
         const user = await this.usersService.remove({ id });
         res.status(200).json(user);

@@ -1,6 +1,7 @@
 import { Database } from "sqlite";
 import { CreateUser, ReadUser, RemoveUser, User } from "../models/User";
 import { NotFoundError } from "../common/Errors";
+import { Collection, Db, ObjectId, OptionalId } from "mongodb";
 
 export interface IUsersRepository {
   readAll(): Promise<Array<User>>;
@@ -8,6 +9,51 @@ export interface IUsersRepository {
   create(user: CreateUser): Promise<User>;
   update(user: User): Promise<User>;
   remove(user: RemoveUser): Promise<RemoveUser>;
+}
+
+export class UsersRepositoryMongo implements IUsersRepository {
+  private users: Collection<OptionalId<{ name: string }>>;
+
+  constructor(private database: Db) {
+    this.users = this.database.collection("users");
+  }
+
+  async readAll(): Promise<Array<User>> {
+    const res = await this.users.find({}).toArray();
+    return res.map(({ _id, name }) => ({ id: _id.toString(), name }));
+  }
+
+  async read(user: ReadUser): Promise<User> {
+    const res = await this.users.findOne({ _id: new ObjectId(user.id) });
+    if (!res) {
+      throw new NotFoundError('User not found.');
+    }
+    return { id: user.id, name: res.name };
+  }
+
+  async create(user: CreateUser): Promise<User> {
+    const res = await this.users.insertOne(user);
+    return { id: res.insertedId.toString(), name: user.name };
+  }
+
+  async update(user: User): Promise<User> {
+    const result = await this.users.updateOne(
+      { _id: new ObjectId(user.id) },
+      { $set: { name: user.name } }
+    );
+    if (result.matchedCount === 0) {
+      throw new NotFoundError('User not found.')
+    }
+    return user;
+  }
+
+  async remove(user: RemoveUser): Promise<RemoveUser> {
+    const result = await this.users.deleteOne({ _id: new ObjectId(user.id) });
+    if (result.deletedCount === 0) {
+      throw new NotFoundError('User not found.');
+    }
+    return user;
+  }
 }
 
 export class UsersRepositorySqlite implements IUsersRepository {
@@ -40,12 +86,12 @@ export class UsersRepositorySqlite implements IUsersRepository {
   }
 
   async update(user: User): Promise<User> {
-    const { changes } = await this.database.run("UPDATE users SET name = ? WHERE id = ?", [
-      user.name,
-      user.id,
-    ]);
+    const { changes } = await this.database.run(
+      "UPDATE users SET name = ? WHERE id = ?",
+      [user.name, user.id]
+    );
     if (changes === 0) {
-      throw new NotFoundError('User not found.');
+      throw new NotFoundError("User not found.");
     }
     return user;
   }

@@ -1,15 +1,19 @@
 import express from "express";
-import { connect } from "./database";
-import { UsersRepositorySqlite } from "./users/UsersRepository";
+import dotenv from 'dotenv';
+
+import { connectMongo, connectSqlite } from "./database";
+import { UsersRepositorySqlite, UsersRepositoryMongo } from "./users/UsersRepository";
 import UsersService from "./users/UsersService";
 import UsersRouter from './users/UsersRouter';
 
 const PORT = 3000;
+dotenv.config();
 
 (async () => {
-  const database = await connect();
-
-  const usersRepository = new UsersRepositorySqlite(database);
+  // const database = await connectSqlite();
+  // const usersRepository = new UsersRepositorySqlite(database);
+  const database = await connectMongo();
+  const usersRepository = new UsersRepositoryMongo(database);
   const usersService = new UsersService(usersRepository);
   const usersRouter = new UsersRouter(usersService);
 
